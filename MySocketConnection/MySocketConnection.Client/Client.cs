@@ -16,11 +16,19 @@ class Client
 
         while (true)
         {
+            int bytesRead = clientSocket.Receive(buffer);
+
+            string messageReceived = Encoding.ASCII.GetString(buffer, 0, bytesRead);
+            
+            Console.WriteLine($"Server sent: {messageReceived}");
+            
             string input = Console.ReadLine();
             
             buffer = Encoding.ASCII.GetBytes(input);
             
             clientSocket.Send(buffer);
+            
+            buffer = new byte[1024];
         }
     }
 }

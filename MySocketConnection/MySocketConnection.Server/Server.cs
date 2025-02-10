@@ -1,6 +1,7 @@
 ﻿using System.Net;
 using System.Net.Sockets;
 using System.Text;
+using System.Threading.Channels;
 
 namespace MySocketConnection.Server;
 
@@ -8,6 +9,8 @@ class Server
 {
     static void Main(string[] args)
     {
+        byte[] buffer = new byte[1024];
+        
         IPAddress serverIp = IPAddress.Any;
         
         Socket serverSocket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
@@ -16,9 +19,20 @@ class Server
         
         serverSocket.Listen(10);
         
-        Socket clientSocket = serverSocket.Accept();
+        Console.WriteLine($"Server started with IP address: {serverIp}.");
         
-        byte[] buffer = new byte[1024];
+        Socket clientSocket = serverSocket.Accept();
+
+        if (clientSocket.Connected)
+        {
+            Console.WriteLine("Client connected!");
+            
+            buffer = Encoding.ASCII.GetBytes("Welcome to the server!");
+            
+            clientSocket.Send(buffer);
+            
+            buffer = new byte[1024];
+        }
 
         while (true)
         {
@@ -27,6 +41,10 @@ class Server
             string messageReceived = Encoding.ASCII.GetString(buffer, 0, bytesRead);
             
             Console.WriteLine($"Client sent: {messageReceived}");
+            
+            clientSocket.Send(Encoding.ASCII.GetBytes(messageReceived),bytesRead,0);
+            
+            buffer = new byte[1024];
         }
     }
 }

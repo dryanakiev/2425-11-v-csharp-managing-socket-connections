@@ -10,7 +10,7 @@ class Client
     {
         Socket clientSocket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
         
-        clientSocket.Connect(new IPEndPoint(IPAddress.Loopback, 8080));
+        clientSocket.Connect(new IPEndPoint(IPAddress.Loopback, 9999));
         
         byte[] buffer = new byte[1024];
 

@@ -1,50 +1,79 @@
 ﻿using System.Net;
 using System.Net.Sockets;
 using System.Text;
-using System.Threading.Channels;
 
 namespace MySocketConnection.Server;
 
 class Server
 {
-    static void Main(string[] args)
+    public IPAddress ServerIpAddress { get; set; }
+    public int ServerPort { get; set; }
+    public byte[] Buffer { get; set; }
+    public TcpListener ServerSocket { get; set; }
+    public List<TcpClient> ClientSockets { get; set; } = new List<TcpClient>();
+
+    public Server()
     {
-        byte[] buffer = new byte[1024];
-        
-        IPAddress serverIp = IPAddress.Any;
-        
-        Socket serverSocket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
-        
-        serverSocket.Bind(new IPEndPoint(serverIp, 8080));
-        
-        serverSocket.Listen(10);
-        
-        Console.WriteLine($"Server started with IP address: {serverIp}.");
-        
-        Socket clientSocket = serverSocket.Accept();
+        Buffer = new byte[1024];
+        ServerIpAddress = IPAddress.Any;
+        ServerPort = 9999;
 
-        if (clientSocket.Connected)
-        {
-            Console.WriteLine("Client connected!");
-            
-            buffer = Encoding.ASCII.GetBytes("Welcome to the server!");
-            
-            clientSocket.Send(buffer);
-            
-            buffer = new byte[1024];
-        }
+        ServerSocket = new TcpListener(ServerIpAddress, ServerPort);
+        
+        ServerSocket.Start();
+    }
 
+    public async Task AcceptClients()
+    {
         while (true)
         {
-            int bytesRead = clientSocket.Receive(buffer);
+            if (ServerSocket.Pending())
+            {
+                TcpClient client = ServerSocket.AcceptTcpClient();
+                
+                ClientSockets.Add(client);
 
-            string messageReceived = Encoding.ASCII.GetString(buffer, 0, bytesRead);
-            
-            Console.WriteLine($"Client sent: {messageReceived}");
-            
-            clientSocket.Send(Encoding.ASCII.GetBytes(messageReceived),bytesRead,0);
-            
-            buffer = new byte[1024];
+                if (client.Connected)
+                {
+                    GreetClient(client).Wait();
+                }
+            }
         }
+    }
+    
+    public async Task GreetClient(TcpClient client)
+    {
+        Console.WriteLine("Client connected!");
+            
+        Buffer = Encoding.ASCII.GetBytes("Welcome to the server!");
+            
+        client.Client.Send(Buffer);
+            
+        Buffer = new byte[1024];
+    }
+
+    public async Task BroadcastToAllClients()
+    {
+        while (true)
+        {
+            int bytesRead = ServerSocket.Server.Receive(Buffer);
+
+            string message = Encoding.ASCII.GetString(Buffer, 0, bytesRead);
+
+            foreach (TcpClient client in ClientSockets)
+            {
+                client.Client.Send(Encoding.ASCII.GetBytes($"{client.Client.RemoteEndPoint}: {message}"));
+            }
+
+            Buffer = new byte[1024];
+        }
+    }
+    
+    
+    static void Main(string[] args)
+    {
+        Server server = new Server();
+
+        server.AcceptClients();
     }
 }

@@ -6,29 +6,56 @@ namespace MySocketConnection.Client;
 
 class Client
 {
-    static void Main(string[] args)
-    {
-        Socket clientSocket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
-        
-        clientSocket.Connect(new IPEndPoint(IPAddress.Loopback, 9999));
-        
-        byte[] buffer = new byte[1024];
+    public IPAddress ServerIpAddress { get; set; }
+    public int ServerPort { get; set; }
+    public TcpClient ClientSocket { get; set; }
+    public byte[] Buffer { get; set; }
+    public NetworkStream ClientStream { get; set; }
 
+    public Client()
+    {
+        ServerIpAddress = IPAddress.Loopback;
+        ServerPort = 9999;
+        Buffer = new byte[1024];
+        
+        ClientSocket.ConnectAsync(ServerIpAddress, ServerPort);
+
+        if (ClientSocket.Connected)
+        {
+            ClientStream = ClientSocket.GetStream();
+            
+            Console.WriteLine($"Connected to server {ServerIpAddress}:{ServerPort} succesfully!");
+
+            _ = Task.Run(() => ReceiveMessage());
+        }
+    }
+
+    public async Task SendMessage()
+    {
+        string message = Console.ReadLine();
+        
+        Buffer = Encoding.ASCII.GetBytes(message);
+        await ClientStream.WriteAsync(Buffer, 0, Buffer.Length);
+    }
+
+    public async Task ReceiveMessage()
+    {
         while (true)
         {
-            int bytesRead = clientSocket.Receive(buffer);
+            int bytesRead = await ClientStream.ReadAsync(Buffer, 0, Buffer.Length);
 
-            string messageReceived = Encoding.ASCII.GetString(buffer, 0, bytesRead);
-            
-            Console.WriteLine($"Server sent: {messageReceived}");
-            
-            string input = Console.ReadLine();
-            
-            buffer = Encoding.ASCII.GetBytes(input);
-            
-            clientSocket.Send(buffer);
-            
-            buffer = new byte[1024];
+            string message = Encoding.ASCII.GetString(Buffer, 0, bytesRead);
+            Console.WriteLine($"\n{message}\nYou: ");
+        }
+    }
+
+    static async Task Main(string[] args)
+    {
+        Client client = new Client();
+        while (true)
+        {
+            await client.ReceiveMessage();
+            await client.SendMessage();
         }
     }
 }

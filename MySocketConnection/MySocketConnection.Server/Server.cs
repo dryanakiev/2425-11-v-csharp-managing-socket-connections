@@ -29,22 +29,24 @@ class Server
         {
             if (ServerSocket.Pending())
             {
-                TcpClient client = ServerSocket.AcceptTcpClient();
-                
-                ClientSockets.Add(client);
+                TcpClient client = await ServerSocket.AcceptTcpClientAsync();
 
                 if (client.Connected)
                 {
-                    GreetClient(client).Wait();
+                    ClientSockets.Add(client);
+                    
+                    Console.WriteLine($"{client.Client.RemoteEndPoint} connected!");
+                    
+                    GreetClient(client);
+                    
+                    _ = Task.Run(() => HandleClient(client));
                 }
             }
         }
     }
     
-    public async Task GreetClient(TcpClient client)
+    public void GreetClient(TcpClient client)
     {
-        Console.WriteLine("Client connected!");
-            
         Buffer = Encoding.ASCII.GetBytes("Welcome to the server!");
             
         client.Client.Send(Buffer);
@@ -52,28 +54,41 @@ class Server
         Buffer = new byte[1024];
     }
 
-    public async Task BroadcastToAllClients()
+    public async Task HandleClient(TcpClient sender)
     {
+        NetworkStream stream = sender.GetStream();
+        
+        Buffer = new byte[1024];
+
         while (true)
         {
-            int bytesRead = ServerSocket.Server.Receive(Buffer);
-
-            string message = Encoding.ASCII.GetString(Buffer, 0, bytesRead);
-
-            foreach (TcpClient client in ClientSockets)
-            {
-                client.Client.Send(Encoding.ASCII.GetBytes($"{client.Client.RemoteEndPoint}: {message}"));
-            }
-
-            Buffer = new byte[1024];
+            await stream.ReadAsync(Buffer, 0, Buffer.Length);
+            
+            string message = Encoding.ASCII.GetString(Buffer, 0, Buffer.Length);
+            Console.WriteLine($"Received from {sender.Client.RemoteEndPoint}: {message}");
+            await BroadcastToAllClients(message, sender);
         }
+    }
+
+    public async Task BroadcastToAllClients(string message, TcpClient sender)
+    {
+        List<Task> sendTasks = new List<Task>();
+        foreach (TcpClient client in ClientSockets)
+        {
+            if (client != sender)
+            {
+                sendTasks.Add(client.GetStream().WriteAsync(Buffer, 0, Buffer.Length));
+            }
+        }
+
+        await Task.WhenAll(sendTasks);
     }
     
     
-    static void Main(string[] args)
+    static async Task Main(string[] args)
     {
         Server server = new Server();
-
-        server.AcceptClients();
+        
+        await server.AcceptClients();
     }
 }

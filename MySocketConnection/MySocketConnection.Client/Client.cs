@@ -14,48 +14,60 @@ class Client
 
     public Client()
     {
-        ServerIpAddress = IPAddress.Loopback;
+        ServerIpAddress = IPAddress.Parse("127.0.0.1");
         ServerPort = 9999;
         Buffer = new byte[1024];
-        
-        ClientSocket.ConnectAsync(ServerIpAddress, ServerPort);
+        ClientSocket = new TcpClient();
+        ClientSocket.Connect(ServerIpAddress, ServerPort);
 
         if (ClientSocket.Connected)
         {
             ClientStream = ClientSocket.GetStream();
             
             Console.WriteLine($"Connected to server {ServerIpAddress}:{ServerPort} succesfully!");
-
-            _ = Task.Run(() => ReceiveMessage());
         }
     }
 
-    public async Task SendMessage()
+    public async Task HandleServer()
     {
-        string message = Console.ReadLine();
+        while(true)
+        {
+            await ReadMessage();
+            await SendMessage();
+        }
         
-        Buffer = Encoding.ASCII.GetBytes(message);
-        await ClientStream.WriteAsync(Buffer, 0, Buffer.Length);
+        // TODO: Make both methods work individually
     }
 
-    public async Task ReceiveMessage()
+    private async Task SendMessage()
     {
-        while (true)
-        {
-            int bytesRead = await ClientStream.ReadAsync(Buffer, 0, Buffer.Length);
+        Console.Write("Enter something: ");
+        string message = Console.ReadLine();
 
-            string message = Encoding.ASCII.GetString(Buffer, 0, bytesRead);
-            Console.WriteLine($"\n{message}\nYou: ");
+        Buffer = Encoding.ASCII.GetBytes(message);
+        await ClientStream.WriteAsync(Buffer, 0, Buffer.Length);
+
+        Buffer = new byte[1024];
+        await ClientStream.FlushAsync();
+    }
+
+    private async Task ReadMessage()
+    {
+        string message;
+        
+        int bytesRead = await ClientStream.ReadAsync(Buffer, 0, Buffer.Length);
+
+        if (bytesRead != 0)
+        {
+            message = Encoding.ASCII.GetString(Buffer, 0, bytesRead);
+            Console.WriteLine($"Server: {message}");
         }
     }
 
     static async Task Main(string[] args)
     {
         Client client = new Client();
-        while (true)
-        {
-            await client.ReceiveMessage();
-            await client.SendMessage();
-        }
+        
+        await client.HandleServer();
     }
 }

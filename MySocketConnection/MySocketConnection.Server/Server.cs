@@ -66,24 +66,18 @@ class Server
             
             string message = Encoding.ASCII.GetString(Buffer, 0, Buffer.Length);
             Console.WriteLine($"Received from {sender.Client.RemoteEndPoint}: {message}");
-            await BroadcastToAllClients(message, sender);
-        }
-    }
-
-    public async Task BroadcastToAllClients(string message, TcpClient sender)
-    {
-        List<Task> sendTasks = new List<Task>();
-        foreach (TcpClient client in ClientSockets)
-        {
-            if (client != sender)
+            
+            List<Task> sendTasks = new List<Task>();
+            foreach (TcpClient client in ClientSockets)
             {
                 sendTasks.Add(client.GetStream().WriteAsync(Buffer, 0, Buffer.Length));
             }
-        }
 
-        await Task.WhenAll(sendTasks);
+            await Task.WhenAll(sendTasks);
+            
+            Buffer = new byte[1024];
+        }
     }
-    
     
     static async Task Main(string[] args)
     {

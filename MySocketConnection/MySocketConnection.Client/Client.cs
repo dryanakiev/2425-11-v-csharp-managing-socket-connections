@@ -38,26 +38,39 @@ class Client
     {
         while (true)
         {
-            Console.Write("Enter something: ");
             string message = Console.ReadLine();
+
+            if (string.IsNullOrWhiteSpace(message)) continue;
 
             byte[] sendBuffer = Encoding.ASCII.GetBytes(message);
             await ClientStream.WriteAsync(sendBuffer, 0, sendBuffer.Length);
-            await ClientStream.FlushAsync();
         }
     }
 
     private async Task ReadMessage()
     {
         byte[] readBuffer = new byte[1024];
-        while (true)
+        try
         {
-            int bytesRead = await ClientStream.ReadAsync(readBuffer, 0, readBuffer.Length);
-            if (bytesRead != 0)
+            while (true)
             {
+                int bytesRead = await ClientStream.ReadAsync(readBuffer, 0, readBuffer.Length);
+                if (bytesRead == 0)
+                {
+                    Console.WriteLine("Server disconnected.");
+                    break;
+                }
+
                 string message = Encoding.ASCII.GetString(readBuffer, 0, bytesRead);
+            
+                // Ensure server messages appear on a new line
                 Console.WriteLine($"\nServer: {message}");
+                Console.Write("Enter something: "); // Reprint prompt
             }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error: {ex.Message}");
         }
     }
 

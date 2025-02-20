@@ -8,13 +8,11 @@ class Server
 {
     public IPAddress ServerIpAddress { get; set; }
     public int ServerPort { get; set; }
-    public byte[] Buffer { get; set; }
     public TcpListener ServerSocket { get; set; }
     public List<TcpClient> ClientSockets { get; set; } = new List<TcpClient>();
 
     public Server()
     {
-        Buffer = new byte[1024];
         ServerIpAddress = IPAddress.Any;
         ServerPort = 9999;
 
@@ -30,15 +28,12 @@ class Server
             if (ServerSocket.Pending())
             {
                 TcpClient client = await ServerSocket.AcceptTcpClientAsync();
-
+                
                 if (client.Connected)
                 {
                     ClientSockets.Add(client);
-                    
                     Console.WriteLine($"{client.Client.RemoteEndPoint} connected!");
-                    
                     GreetClient(client);
-                    
                     _ = Task.Run(() => HandleClient(client));
                 }
             }
@@ -47,37 +42,39 @@ class Server
     
     public void GreetClient(TcpClient client)
     {
-        Buffer = Encoding.ASCII.GetBytes("Welcome to the server!");
-            
-        client.Client.Send(Buffer);
-            
-        Buffer = new byte[1024];
+        client.Client.Send(Encoding.ASCII.GetBytes("Welcome to the server!"));
     }
 
     public async Task HandleClient(TcpClient sender)
     {
         NetworkStream stream = sender.GetStream();
-        
-        Buffer = new byte[1024];
+        byte[] buffer = new byte[1024];
 
         while (true)
         {
-            await stream.ReadAsync(Buffer, 0, Buffer.Length);
+            int bytesRead = await stream.ReadAsync(buffer, 0, buffer.Length);
             
-            string message = Encoding.ASCII.GetString(Buffer, 0, Buffer.Length);
+            if (bytesRead == 0) // Client disconnected
+            {
+                break;
+            } 
+
+            string message = Encoding.ASCII.GetString(buffer, 0, bytesRead);
             Console.WriteLine($"Received from {sender.Client.RemoteEndPoint}: {message}");
-            
+
             List<Task> sendTasks = new List<Task>();
             foreach (TcpClient client in ClientSockets)
             {
-                sendTasks.Add(client.GetStream().WriteAsync(Buffer, 0, Buffer.Length));
+                sendTasks.Add(client.GetStream().WriteAsync(buffer, 0, bytesRead));
             }
 
             await Task.WhenAll(sendTasks);
-            
-            Buffer = new byte[1024];
         }
+
+        sender.Close();
+        ClientSockets.Remove(sender);
     }
+
     
     static async Task Main(string[] args)
     {

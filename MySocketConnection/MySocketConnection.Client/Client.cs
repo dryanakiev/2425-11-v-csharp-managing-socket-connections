@@ -9,14 +9,12 @@ class Client
     public IPAddress ServerIpAddress { get; set; }
     public int ServerPort { get; set; }
     public TcpClient ClientSocket { get; set; }
-    public byte[] Buffer { get; set; }
     public NetworkStream ClientStream { get; set; }
 
     public Client()
     {
         ServerIpAddress = IPAddress.Parse("127.0.0.1");
         ServerPort = 9999;
-        Buffer = new byte[1024];
         ClientSocket = new TcpClient();
         ClientSocket.Connect(ServerIpAddress, ServerPort);
 
@@ -30,37 +28,36 @@ class Client
 
     public async Task HandleServer()
     {
-        while(true)
-        {
-            await ReadMessage();
-            await SendMessage();
-        }
-        
-        // TODO: Make both methods work individually
+        var readTask = Task.Run(ReadMessage);
+        var sendTask = Task.Run(SendMessage);
+
+        await Task.WhenAll(readTask, sendTask);
     }
 
     private async Task SendMessage()
     {
-        Console.Write("Enter something: ");
-        string message = Console.ReadLine();
+        while (true)
+        {
+            Console.Write("Enter something: ");
+            string message = Console.ReadLine();
 
-        Buffer = Encoding.ASCII.GetBytes(message);
-        await ClientStream.WriteAsync(Buffer, 0, Buffer.Length);
-
-        Buffer = new byte[1024];
-        await ClientStream.FlushAsync();
+            byte[] sendBuffer = Encoding.ASCII.GetBytes(message);
+            await ClientStream.WriteAsync(sendBuffer, 0, sendBuffer.Length);
+            await ClientStream.FlushAsync();
+        }
     }
 
     private async Task ReadMessage()
     {
-        string message;
-        
-        int bytesRead = await ClientStream.ReadAsync(Buffer, 0, Buffer.Length);
-
-        if (bytesRead != 0)
+        byte[] readBuffer = new byte[1024];
+        while (true)
         {
-            message = Encoding.ASCII.GetString(Buffer, 0, bytesRead);
-            Console.WriteLine($"Server: {message}");
+            int bytesRead = await ClientStream.ReadAsync(readBuffer, 0, readBuffer.Length);
+            if (bytesRead != 0)
+            {
+                string message = Encoding.ASCII.GetString(readBuffer, 0, bytesRead);
+                Console.WriteLine($"\nServer: {message}");
+            }
         }
     }
 

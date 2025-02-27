@@ -1,6 +1,7 @@
 ﻿using System.Net;
 using System.Text;
 using System.Text.Json;
+using MySocketConnection.WebSocket.Server.Models;
 
 namespace MySocketConnection.WebSocket.Server
 {
@@ -72,11 +73,26 @@ namespace MySocketConnection.WebSocket.Server
                         string password = parsedData["password"];
                         string passwordRepeat = parsedData["password-repeat"];
 
-                        WriteToJsonFile(email, password);
+                        if (password == passwordRepeat)
+                        {
+                            WriteToJsonFile(new User()
+                            {
+                                Email = email,
+                                Password = password,
+                            });
+                            
+                            string returnPath = Path.Combine(rootDirectory, "Pages/index.html");
+                            responseString = File.ReadAllText(returnPath);
+                            context.Response.ContentType = "text/html";
+                        }
+                        else
+                        {
+                            string returnPath = Path.Combine(rootDirectory, "Pages/register.html");
+                            responseString = File.ReadAllText(returnPath);
+                            context.Response.ContentType = "text/html";
+                        }
                         
-                        string returnPath = Path.Combine(rootDirectory, "Pages/index.html");
-                        responseString = File.ReadAllText(returnPath);
-                        context.Response.ContentType = "text/html";
+                        
                     }
                 }
             }
@@ -100,11 +116,18 @@ namespace MySocketConnection.WebSocket.Server
             context.Response.OutputStream.Close();
         }
 
-        public async Task WriteToJsonFile(string email, string password)
+        public async Task WriteToJsonFile(User user)
         {
             string fileName = "Users.json";
-            await using FileStream createStream = File.Create(fileName);
-            await JsonSerializer.SerializeAsync(createStream, $"{email}@{password}");
+            if(!File.Exists(fileName)){
+                await using FileStream createStream = File.Create(fileName);
+                await JsonSerializer.SerializeAsync(createStream, user);
+            }
+            else
+            {
+                await using FileStream writeStream = File.Open(fileName, FileMode.Append, FileAccess.Write, FileShare.None);
+                await JsonSerializer.SerializeAsync(writeStream, user); // TODO: Fix object appending
+            }
         }
         
         static void Main(string[] args)

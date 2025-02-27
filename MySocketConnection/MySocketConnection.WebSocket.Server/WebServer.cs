@@ -1,5 +1,6 @@
 ﻿using System.Net;
 using System.Text;
+using System.Text.Json;
 
 namespace MySocketConnection.WebSocket.Server
 {
@@ -53,6 +54,32 @@ namespace MySocketConnection.WebSocket.Server
                 responseString = File.ReadAllText(contactPath);
                 context.Response.ContentType = "text/html";
             }
+            else if (path == "/register")
+            {
+                if (context.Request.HttpMethod == "GET")
+                {
+                    string registerPath = Path.Combine(rootDirectory, "register.html");
+                    responseString = File.ReadAllText(registerPath);
+                    context.Response.ContentType = "text/html";
+                }
+                else if (context.Request.HttpMethod == "POST")
+                {
+                    using (StreamReader reader = new StreamReader(context.Request.InputStream, context.Request.ContentEncoding))
+                    {
+                        string formData = reader.ReadToEnd();
+                        var parsedData = System.Web.HttpUtility.ParseQueryString(formData);
+                        string email = parsedData["email"];
+                        string password = parsedData["password"];
+                        string passwordRepeat = parsedData["password-repeat"];
+
+                        WriteToJsonFile(email, password);
+                        
+                        string returnPath = Path.Combine(rootDirectory, "index.html");
+                        responseString = File.ReadAllText(returnPath);
+                        context.Response.ContentType = "text/html";
+                    }
+                }
+            }
             else if (path.StartsWith("/css/"))
             {
                 string cssFilePath = Path.Combine(rootDirectory, path.TrimStart('/'));
@@ -73,6 +100,13 @@ namespace MySocketConnection.WebSocket.Server
             context.Response.OutputStream.Close();
         }
 
+        public async Task WriteToJsonFile(string email, string password)
+        {
+            string fileName = "Users.json";
+            await using FileStream createStream = File.Create(fileName);
+            await JsonSerializer.SerializeAsync(createStream, $"{email}@{password}");
+        }
+        
         static void Main(string[] args)
         {
             WebServer server = new WebServer();

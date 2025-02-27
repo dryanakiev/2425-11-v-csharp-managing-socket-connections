@@ -33,24 +33,24 @@ namespace MySocketConnection.WebSocket.Server
             string responseString = " ";
             string rootDirectory = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot");
             
-            string userIP = context.Request.RemoteEndPoint?.Address.ToString() ?? "Unknown IP";
-            Console.WriteLine($"User {userIP} is visiting: {path}");
+            string userIp = context.Request.RemoteEndPoint?.Address.ToString() ?? "Unknown IP";
+            Console.WriteLine($"User {userIp} is visiting: {path}");
 
             if (path == "/")
             {
-                string indexPath = Path.Combine(rootDirectory, "index.html");
+                string indexPath = Path.Combine(rootDirectory, "Pages/index.html");
                 responseString = File.ReadAllText(indexPath);
                 context.Response.ContentType = "text/html";
             }
             else if (path == "/about")
             {
-                string aboutPath = Path.Combine(rootDirectory, "about.html");
+                string aboutPath = Path.Combine(rootDirectory, "Pages/about.html");
                 responseString = File.ReadAllText(aboutPath);
                 context.Response.ContentType = "text/html";
             }
             else if (path == "/contact")
             {
-                string contactPath = Path.Combine(rootDirectory, "contact.html");
+                string contactPath = Path.Combine(rootDirectory, "Pages/contact.html");
                 responseString = File.ReadAllText(contactPath);
                 context.Response.ContentType = "text/html";
             }
@@ -58,7 +58,7 @@ namespace MySocketConnection.WebSocket.Server
             {
                 if (context.Request.HttpMethod == "GET")
                 {
-                    string registerPath = Path.Combine(rootDirectory, "register.html");
+                    string registerPath = Path.Combine(rootDirectory, "Pages/register.html");
                     responseString = File.ReadAllText(registerPath);
                     context.Response.ContentType = "text/html";
                 }
@@ -74,7 +74,7 @@ namespace MySocketConnection.WebSocket.Server
 
                         WriteToJsonFile(email, password);
                         
-                        string returnPath = Path.Combine(rootDirectory, "index.html");
+                        string returnPath = Path.Combine(rootDirectory, "Pages/index.html");
                         responseString = File.ReadAllText(returnPath);
                         context.Response.ContentType = "text/html";
                     }

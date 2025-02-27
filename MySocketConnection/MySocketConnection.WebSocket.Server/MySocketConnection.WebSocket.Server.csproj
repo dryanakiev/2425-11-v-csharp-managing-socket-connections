@@ -9,6 +9,18 @@
 
     <ItemGroup>
         <None Update="wwwroot\**" CopyToOutputDirectory="PreserveNewest" />
+        <None Update="wwwroot\Pages\about.html">
+          <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+        </None>
+        <None Update="wwwroot\Pages\contact.html">
+          <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+        </None>
+        <None Update="wwwroot\Pages\index.html">
+          <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+        </None>
+        <None Update="wwwroot\Pages\register.html">
+          <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+        </None>
     </ItemGroup>
 
 
